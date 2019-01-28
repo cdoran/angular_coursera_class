@@ -1,18 +1,31 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Feedback, ContactType } from '../shared/feedback';
+import { flyInOut, expand } from '../animations/app.animation';
+import { FeedbackService } from '../services/feedback.service';
 
 @Component({
   selector: 'app-contact',
   templateUrl: './contact.component.html',
-  styleUrls: ['./contact.component.scss']
+  styleUrls: ['./contact.component.scss'],
+  // tslint:disable-next:use-host-property-decorator
+  host: {
+  '[@expand]': 'true',
+  '[@flyInOut]': 'true',
+  'style': 'display: block' 
+  },
+  animations: [flyInOut(), expand()]
+
 })
 export class ContactComponent implements OnInit {
 
   @ViewChild('fform') feedbackFormDirective;
   feedbackForm: FormGroup;
-  feedback: Feedback;
+  feedback: Feedback = { firstname: '', lastname: '', telnum: 0, email: '', 
+                         agree: false, contacttype: '', message: ''}; 
+  feedbackState = 'FORM'; 
   contactType = ContactType;
+  postError: String;
   formErrors = { 
       'firstname': '',
       'lastname': '',
@@ -41,7 +54,8 @@ export class ContactComponent implements OnInit {
   };
       
 
-  constructor(private fb: FormBuilder) { 
+  constructor(private fb: FormBuilder,
+              private feedbackService: FeedbackService) { 
     this.createForm();
   }
 
@@ -63,8 +77,15 @@ export class ContactComponent implements OnInit {
   }
 
   onSubmit() {
+    this.feedbackState = 'SPINNER';
     this.feedback = this.feedbackForm.value;
     console.log(this.feedback);
+    this.feedbackService.submitFeedback(this.feedback)
+        .subscribe(feedback => { 
+             this.feedback = feedback; 
+             this.feedbackState = 'RESULT';
+             }, errmess => { this.feedback = null, this.feedbackState = 'FORM', this.postError = <any>errmess; });
+    setTimeout(() => this.feedbackState = 'FORM', 5000);
     this.feedbackForm.reset({
       firstname: '',
       lastname: '', 
